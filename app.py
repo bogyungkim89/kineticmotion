@@ -183,7 +183,6 @@ elif page == "중력에 의한 운동":
                     st.info(f"선택된 가속도: {g_input} m/s²")
                 
                 st.markdown("---")
-                # 가속도 슬라이더 아래 배치된 컨트롤 버튼군
                 if st.button("🚀 낙하 시작", use_container_width=True):
                     st.session_state.ff_playing = True
                 if st.button("🌍 지구 중력 가속도 선택 (9.8)", use_container_width=True):
@@ -204,7 +203,7 @@ elif page == "중력에 의한 운동":
                 y_start = 100.0  
                 t_final = np.sqrt(2 * y_start / g_input)
                 
-                # 실시간 애니메이션 루프
+                # 실시간 애니메이션 루프 구동
                 while st.session_state.ff_playing:
                     if st.session_state.ff_time < t_final:
                         st.session_state.ff_time = min(st.session_state.ff_time + 0.04, t_final)
@@ -212,16 +211,18 @@ elif page == "중력에 의한 운동":
                         st.session_state.ff_playing = False
                     
                     fig = build_ff_figure(st.session_state.ff_time, t_final, g_input, y_start)
-                    chart_target.plotly_chart(fig, key="ff_live_canvas", use_container_width=True, config={'displayModeBar': False})
+                    # [💡 해결 완료] 중복 ID 에러를 방지하기 위해 key 인자를 완전히 제거했습니다.
+                    chart_target.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
                     time.sleep(0.02)
                     
                     if not st.session_state.ff_playing:
                         st.rerun()
 
+                # 정지 상태 화면 렌더링 (key 인자 제거)
                 fig = build_ff_figure(st.session_state.ff_time, t_final, g_input, y_start)
-                chart_target.plotly_chart(fig, key="ff_live_canvas", use_container_width=True, config={'displayModeBar': False})
+                chart_target.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 차트 빌더 함수 (오류 수정 지점)
+        # 차트 빌더 함수
         def build_ff_figure(t_now, t_max, g_curr, y_max):
             t_space = np.linspace(0, t_max, 100)
             y_space = y_max - 0.5 * g_curr * t_space**2
@@ -233,7 +234,6 @@ elif page == "중력에 의한 운동":
             
             curr_y = y_data[-1] if len(y_data) > 0 else y_max
             
-            # [💡 수정 완료] make_subplots 내부에서 annotations 옵션을 완전히 분리했습니다.
             fig = make_subplots(
                 rows=1, cols=4,
                 column_widths=[0.14, 0.28, 0.28, 0.28],
@@ -244,7 +244,7 @@ elif page == "중력에 의한 운동":
             fig.add_trace(go.Scatter(x=[-0.5, 0.5], y=[0, 0], mode='lines', line=dict(color='green', width=6), showlegend=False, hoverinfo='skip'), row=1, col=1)
             fig.add_trace(go.Scatter(x=[0], y=[curr_y], mode='markers', marker=dict(size=22, color='red'), showlegend=False), row=1, col=1)
             
-            # Col 2~4: 실시간 선 그래프 드로우
+            # Col 2~4: 멀티 연동 실시간 선 드로우
             fig.add_trace(go.Scatter(x=t_data, y=y_data, mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=1, col=2)
             fig.add_trace(go.Scatter(x=t_data, y=v_data, mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=1, col=3)
             fig.add_trace(go.Scatter(x=t_data, y=a_data, mode='lines', line=dict(color='orange', width=3.5), showlegend=False), row=1, col=4)
@@ -254,7 +254,6 @@ elif page == "중력에 의한 운동":
                 fig.add_trace(go.Scatter(x=[t_data[-1]], y=[v_data[-1]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=1, col=3)
                 fig.add_trace(go.Scatter(x=[t_data[-1]], y=[a_data[-1]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=1, col=4)
             
-            # [💡 수정 완료] 이곳 update_layout 내부로 옮겨 고정 제목들을 정상 렌더링합니다.
             fig.update_layout(
                 height=680,
                 margin=dict(l=40, r=20, t=60, b=50),
@@ -276,7 +275,7 @@ elif page == "중력에 의한 운동":
         free_fall_isolated_engine()
 
     # ------------------------------------------
-    # Tab 2 & 3: 포물선 및 등속 원운동 (기존 기능 유지)
+    # Tab 2 & 3: 포물선 및 등속 원운동
     # ------------------------------------------
     with tabs[1]:
         st.subheader("■ 포물선운동(수평으로 던진 운동)")
