@@ -8,7 +8,8 @@ st.set_page_config(page_title="운동학 시뮬레이션", page_icon="🏎️", 
 
 # 사이드바 메뉴 
 st.sidebar.title("📚 학습 메뉴")
-page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["위치/속도/가속도", "2차원 운동"])
+# [수정] 2페이지 메뉴 이름 변경
+page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["위치/속도/가속도", "중력에 의한 운동"])
 
 if page == "위치/속도/가속도":
     st.title("📈 물체의 운동에 따른 시뮬레이션과 위치/속도/가속도 분석")
@@ -32,7 +33,7 @@ if page == "위치/속도/가속도":
         v_arr = v0 + a * t_arr
         a_arr = np.full_like(t_arr, a)
 
-        # 서브플롯 구성 (내장 제목은 사용하지 않고 Annotation으로 고정)
+        # 서브플롯 구성
         fig = make_subplots(
             rows=2, cols=3, 
             specs=[[{"colspan": 3}, None, None], [{}, {}, {}]],
@@ -46,7 +47,7 @@ if page == "위치/속도/가속도":
         # [1번 트레이스] 움직이는 빨간 점 (초기값)
         fig.add_trace(go.Scatter(x=[x_arr[0]], y=[0], mode='markers', marker=dict(size=20, color='red'), showlegend=False), row=1, col=1)
         
-        # [2~4번 트레이스] 실시간 라인 (위치, 속도, 가속도 모두 그림)
+        # [2~4번 트레이스] 실시간 라인 (위치, 속도, 가속도)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='lines', line=dict(color='orange', width=3.5), showlegend=False), row=2, col=3)
@@ -56,7 +57,7 @@ if page == "위치/속도/가속도":
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=2, col=3)
 
-        # 각 그래프의 고정된 제목을 생성하는 함수 (애니메이션 중 사라짐 방지)
+        # 각 그래프의 고정된 제목을 생성하는 함수
         def get_title_annotations():
             return [
                 dict(x=0.15, y=0.62, xref="paper", yref="paper", text="<b>■ 위치-시간 그래프</b>", showarrow=False, font=dict(color="blue", size=16)),
@@ -70,10 +71,9 @@ if page == "위치/속도/가속도":
             curr_v = v_arr[i]
             v_len = curr_v * 1.5 
             
-            # 매 프레임마다 제목 Annotation을 함께 렌더링해야 글씨가 안 없어집니다.
             frame_annotations = get_title_annotations()
             
-            # 속도 화살표: 일체형 느낌의 날렵한 디자인 적용
+            # 속도 화살표
             frame_annotations.append(
                 dict(
                     x=x_arr[i] + v_len, y=0.7, ax=x_arr[i], ay=0.7,
@@ -81,7 +81,7 @@ if page == "위치/속도/가속도":
                     showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=4, arrowcolor="#00CED1"
                 )
             )
-            # 동적 속도 값 텍스트 (화살표 위에 위치)
+            # 동적 속도 값 텍스트
             frame_annotations.append(
                 dict(
                     x=x_arr[i], y=1.7, xref="x1", yref="y1",
@@ -94,7 +94,7 @@ if page == "위치/속도/가속도":
                 name=f'frame_{i}',
                 data=[
                     go.Scatter(x=[x_arr[i]], y=[0]), # 1번: 물체 점
-                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), # 2번: x-t 선 (이제 그려짐)
+                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), # 2번: x-t 선 
                     go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), # 3번: v-t 선
                     go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), # 4번: a-t 선
                     go.Scatter(x=[t_arr[i]], y=[x_arr[i]]), # 5번: x-t 점
@@ -119,7 +119,7 @@ if page == "위치/속도/가속도":
         ))
 
         fig.update_layout(
-            height=650, # 상자가 제거되었으므로 높이를 더 줄여 콤팩트하게
+            height=650, 
             margin=dict(l=20, r=20, t=60, b=60), 
             annotations=initial_annotations,
             updatemenus=[dict(
@@ -205,27 +205,32 @@ if page == "위치/속도/가속도":
         """
         st.markdown(table_html, unsafe_allow_html=True)
 
-elif page == "2차원 운동":
-    st.title("🌐 2차원 운동 분석")
-    tabs = st.tabs(["자유낙하", "수평 투사", "등속 원운동"])
+# [수정] 2페이지 로직
+elif page == "중력에 의한 운동":
+    st.title("🌐 중력에 의한 운동")
+    # [수정] 탭 이름 변경
+    tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
     g = 9.8
+    
     with tabs[0]:
-        st.subheader("■ 자유낙하 시뮬레이션")
-        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="f_v17")
+        st.subheader("■ 자유낙하운동(등가속도직선운동)")
+        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="f_v18")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[0], y=[-0.5*g*t**2], mode='markers', marker=dict(size=15, color='red')))
         fig.update_layout(xaxis=dict(range=[-2, 2]), yaxis=dict(range=[-50, 5]), height=450)
         st.plotly_chart(fig, use_container_width=True)
+        
     with tabs[1]:
-        st.subheader("■ 수평 투사 시뮬레이션")
-        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v17")
+        st.subheader("■ 포물선운동(수평으로 던진 운동)")
+        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v18")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[10*t], y=[44.1-0.5*g*t**2], mode='markers', marker=dict(size=15, color='red')))
         fig.update_layout(xaxis=dict(range=[0, 40]), yaxis=dict(range=[0, 50]), height=450)
         st.plotly_chart(fig, use_container_width=True)
+        
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
-        ang = st.slider("각도(도)", 0, 360, 45, key="c_v17")
+        ang = st.slider("각도(도)", 0, 360, 45, key="c_v18")
         r = np.radians(ang)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[10*np.cos(r)], y=[10*np.sin(r)], mode='markers', marker=dict(size=15, color='red')))
