@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import time
 
 # 1. 페이지 설정 및 세션 상태 초기화
 st.set_page_config(page_title="운동학 시뮬레이션", page_icon="🏎️", layout="wide")
@@ -168,13 +167,14 @@ elif page == "중력에 의한 운동":
     with tabs[0]:
         st.subheader("■ 자유낙하운동(등가속도직선운동)")
         
-        @st.fragment
+        # [💡 핵심 해결책] run_every가 프레임 업데이트 루프(while)를 대체하여 ID 복제 오류를 원천 차단합니다.
+        @st.fragment(run_every=0.04 if st.session_state.ff_playing else None)
         def free_fall_isolated_engine():
             col_ctrl, col_main = st.columns([1, 4])
             
             with col_ctrl:
                 st.markdown("### ⚙️ 가속도 및 제어")
-                g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="ff_g_slider")
+                g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_val")
                 st.session_state.g_val = g_input
                 
                 if abs(g_input - 9.8) < 1e-4:
@@ -183,46 +183,41 @@ elif page == "중력에 의한 운동":
                     st.info(f"선택된 가속도: {g_input} m/s²")
                 
                 st.markdown("---")
+                # 가속도 슬라이더 아래 배치된 컨트롤 버튼군
                 if st.button("🚀 낙하 시작", use_container_width=True):
                     st.session_state.ff_playing = True
+                    st.rerun()
                 if st.button("🌍 지구 중력 가속도 선택 (9.8)", use_container_width=True):
                     st.session_state.g_val = 9.8
+                    st.session_state.g_slider_val = 9.8
                     st.session_state.ff_time = 0.0
                     st.session_state.ff_playing = False
                     st.rerun()
                 if st.button("⏸️ 일시정지", use_container_width=True):
                     st.session_state.ff_playing = False
+                    st.rerun()
                 if st.button("🔄 시뮬레이션 초기화", use_container_width=True):
                     st.session_state.ff_playing = False
                     st.session_state.ff_time = 0.0
                     st.rerun()
             
             with col_main:
-                chart_target = st.empty()
-                
                 y_start = 100.0  
-                t_final = np.sqrt(2 * y_start / g_input)
+                t_final = np.sqrt(2 * y_start / st.session_state.g_val)
                 
-                # 실시간 애니메이션 루프 구동
-                while st.session_state.ff_playing:
+                # [💡 매커니즘 전환] while 루프를 없애고 프래그먼트가 돌 때마다 시간을 1프레임씩 누적 계산
+                if st.session_state.ff_playing:
                     if st.session_state.ff_time < t_final:
                         st.session_state.ff_time = min(st.session_state.ff_time + 0.04, t_final)
                     else:
                         st.session_state.ff_playing = False
-                    
-                    fig = build_ff_figure(st.session_state.ff_time, t_final, g_input, y_start)
-                    # [💡 해결 완료] 중복 ID 에러를 방지하기 위해 key 인자를 완전히 제거했습니다.
-                    chart_target.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-                    time.sleep(0.02)
-                    
-                    if not st.session_state.ff_playing:
                         st.rerun()
 
-                # 정지 상태 화면 렌더링 (key 인자 제거)
-                fig = build_ff_figure(st.session_state.ff_time, t_final, g_input, y_start)
-                chart_target.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                # 단 한 번의 깨끗한 렌더링 세션 (ID 충돌 원인 제거)
+                fig = build_ff_figure(st.session_state.ff_time, t_final, st.session_state.g_val, y_start)
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        # 차트 빌더 함수
+        # 차트 빌더 함수 (1행 4열 구조)
         def build_ff_figure(t_now, t_max, g_curr, y_max):
             t_space = np.linspace(0, t_max, 100)
             y_space = y_max - 0.5 * g_curr * t_space**2
