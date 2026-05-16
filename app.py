@@ -6,12 +6,12 @@ from plotly.subplots import make_subplots
 # 1. 페이지 설정
 st.set_page_config(page_title="운동학 시뮬레이션", page_icon="🏎️", layout="wide")
 
-# 사이드바 메뉴
+# 사이드바 메뉴 (슬라이더만 유지)
 st.sidebar.title("📚 학습 메뉴")
-page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["1차원 운동", "2차원 운동"])
+page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["위치/속도/가속도", "2차원 운동"])
 
-if page == "1차원 운동":
-    st.title("📈 1차원 운동 시뮬레이션")
+if page == "위치/속도/가속도":
+    st.title("📈 물체의 운동에 따른 시뮬레이션과 위치/속도/가속도 분석")
     
     col_ctrl, col_main = st.columns([1, 4])
     
@@ -32,31 +32,30 @@ if page == "1차원 운동":
         v_arr = v0 + a * t_arr
         a_arr = np.full_like(t_arr, a)
 
-        # 서브플롯 구성 (가속도-시간 그래프 제목 삭제)
+        # 서브플롯 구성
         fig = make_subplots(
             rows=2, cols=3, 
             specs=[[{"colspan": 3}, None, None], [{}, {}, {}]],
-            subplot_titles=("", "■ 위치-시간 그래프", "■ 속도-시간 그래프", ""), 
             row_heights=[0.3, 0.7],
             vertical_spacing=0.25
         )
 
-        # [0~3번 트레이스] 배경
+        # [0~3번 트레이스] 배경 및 정적 라인
         fig.add_trace(go.Scatter(x=[-50, 50], y=[0, 0], mode='lines', line=dict(color='gray', width=2), showlegend=False, hoverinfo='skip'), row=1, col=1)
-        fig.add_trace(go.Scatter(x=t_arr, y=x_arr, mode='lines', line=dict(color='rgba(200,200,200,0.3)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=1)
+        # 위치-시간 그래프는 전체 궤적(파란색 점선)만 고정적으로 보여줌
+        fig.add_trace(go.Scatter(x=t_arr, y=x_arr, mode='lines', line=dict(color='rgba(0,0,255,0.4)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=1)
+        # 속도, 가속도는 옅은 점선 배경
         fig.add_trace(go.Scatter(x=t_arr, y=v_arr, mode='lines', line=dict(color='rgba(200,200,200,0.3)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=2)
         fig.add_trace(go.Scatter(x=t_arr, y=a_arr, mode='lines', line=dict(color='rgba(200,200,200,0.3)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=3)
 
-        # [4번 트레이스] 움직이는 빨간 점
+        # [4번 트레이스] 움직이는 빨간 점 (초기값)
         fig.add_trace(go.Scatter(x=[x_arr[0]], y=[0], mode='markers', marker=dict(size=20, color='red'), showlegend=False), row=1, col=1)
         
-        # [5~7번 트레이스] 실시간 라인
-        fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
+        # [5~6번 트레이스] 속도/가속도 실시간 라인 (위치 그래프는 제외)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='lines', line=dict(color='orange', width=3.5), showlegend=False), row=2, col=3)
 
-        # [8~10번 트레이스] 현재 위치 마커
-        fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='markers', marker=dict(color='blue', size=8), showlegend=False), row=2, col=1)
+        # [7~8번 트레이스] 속도/가속도 현재 위치 마커
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=2, col=3)
 
@@ -69,36 +68,45 @@ if page == "1차원 운동":
             frames.append(go.Frame(
                 name=f'frame_{i}',
                 data=[
-                    go.Scatter(x=[x_arr[i]], y=[0]),
-                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]),
-                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]),
-                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]),
-                    go.Scatter(x=[t_arr[i]], y=[x_arr[i]]),
-                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),
-                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])
+                    go.Scatter(x=[x_arr[i]], y=[0]), # Index 4 (물체 점)
+                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), # Index 5 (v-t 선)
+                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), # Index 6 (a-t 선)
+                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]), # Index 7 (v-t 점)
+                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])  # Index 8 (a-t 점)
                 ],
-                traces=[4, 5, 6, 7, 8, 9, 10], 
+                traces=[4, 5, 6, 7, 8], 
                 layout=go.Layout(annotations=[
-                    # 속도 화살표
+                    # 동적 속도 화살표
                     dict(
                         x=x_arr[i] + v_len, y=0.7, ax=x_arr[i], ay=0.7,
                         xref="x1", yref="y1", axref="x1", ayref="y1",
                         showarrow=True, arrowhead=2, arrowsize=0.3, arrowwidth=12, arrowcolor="#00CED1"
                     ),
-                    # 속도 값 텍스트
+                    # 동적 속도 값 텍스트
                     dict(
                         x=x_arr[i], y=1.7, xref="x1", yref="y1",
                         text=f"<b>속도 = {curr_v:.1f} m/s</b>", showarrow=False, 
                         font=dict(color="#008B8B", size=15)
-                    )
+                    ),
+                    # 각 그래프 위에 색상이 들어간 제목 고정
+                    dict(x=0.15, y=0.62, xref="paper", yref="paper", text="<b>■ 위치-시간 그래프</b>", showarrow=False, font=dict(color="blue", size=16)),
+                    dict(x=0.50, y=0.62, xref="paper", yref="paper", text="<b>■ 속도-시간 그래프</b>", showarrow=False, font=dict(color="green", size=16)),
+                    dict(x=0.85, y=0.62, xref="paper", yref="paper", text="<b>■ 가속도-시간 그래프</b>", showarrow=False, font=dict(color="orange", size=16))
                 ])
             ))
         fig.frames = frames
 
-        # 레이아웃 설정
+        # 초기 상태 레이아웃의 Annotation 설정
         fig.update_layout(
             height=750, 
             margin=dict(l=20, r=20, t=60, b=60), 
+            annotations=[
+                dict(x=0.15, y=0.62, xref="paper", yref="paper", text="<b>■ 위치-시간 그래프</b>", showarrow=False, font=dict(color="blue", size=16)),
+                dict(x=0.50, y=0.62, xref="paper", yref="paper", text="<b>■ 속도-시간 그래프</b>", showarrow=False, font=dict(color="green", size=16)),
+                dict(x=0.85, y=0.62, xref="paper", yref="paper", text="<b>■ 가속도-시간 그래프</b>", showarrow=False, font=dict(color="orange", size=16)),
+                dict(x=x_arr[0] + v_arr[0] * 1.5, y=0.7, ax=x_arr[0], ay=0.7, xref="x1", yref="y1", axref="x1", ayref="y1", showarrow=True, arrowhead=2, arrowsize=0.3, arrowwidth=12, arrowcolor="#00CED1"),
+                dict(x=x_arr[0], y=1.7, xref="x1", yref="y1", text=f"<b>속도 = {v_arr[0]:.1f} m/s</b>", showarrow=False, font=dict(color="#008B8B", size=15))
+            ],
             updatemenus=[dict(
                 type="buttons",
                 buttons=[
@@ -118,7 +126,7 @@ if page == "1차원 운동":
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # [추가] 그래프 간의 관계 표
+        # 그래프 간의 관계 표
         # ==========================================
         st.markdown("### 📊 시간에 따른 위치, 속도, 가속도 그래프의 관계")
         
@@ -188,21 +196,21 @@ elif page == "2차원 운동":
     g = 9.8
     with tabs[0]:
         st.subheader("■ 자유낙하 시뮬레이션")
-        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="f_v14")
+        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="f_v16")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[0], y=[-0.5*g*t**2], mode='markers', marker=dict(size=15, color='red')))
         fig.update_layout(xaxis=dict(range=[-2, 2]), yaxis=dict(range=[-50, 5]), height=450)
         st.plotly_chart(fig, use_container_width=True)
     with tabs[1]:
         st.subheader("■ 수평 투사 시뮬레이션")
-        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v14")
+        t = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v16")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[10*t], y=[44.1-0.5*g*t**2], mode='markers', marker=dict(size=15, color='red')))
         fig.update_layout(xaxis=dict(range=[0, 40]), yaxis=dict(range=[0, 50]), height=450)
         st.plotly_chart(fig, use_container_width=True)
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
-        ang = st.slider("각도(도)", 0, 360, 45, key="c_v14")
+        ang = st.slider("각도(도)", 0, 360, 45, key="c_v16")
         r = np.radians(ang)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[10*np.cos(r)], y=[10*np.sin(r)], mode='markers', marker=dict(size=15, color='red')))
