@@ -157,6 +157,7 @@ if page == "위치/속도/가속도":
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
+    g_default = 9.8 
     tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
     
     # ------------------------------------------
@@ -245,13 +246,12 @@ elif page == "중력에 의한 운동":
         st.plotly_chart(fig_ff, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 2: 포물선운동 (단일 통합 캔버스 + 정밀 보조선 시스템)
+    # Tab 2: 포물선운동 (속도-시간 그래프 동기화 하단 배치 완료)
     # ------------------------------------------
     with tabs[1]:
         st.subheader("■ 포물선운동(수평으로 던진 운동)")
-        st.info("💡 **동기화 분석**: 파란색 실시간 수평 보조선은 **자유낙하운동과의 높이 일치**를, 주황색 연직 보조선은 **등속도운동과의 수평 위치 일치**를 보여줍니다.")
+        st.info("💡 **동기화 분석**: 파란색 실시간 보조선은 **자유낙하운동(연직)과의 일치**를, 주황색 보조선은 **등속도운동(수평)과의 일치**를 보여줍니다. 시뮬레이터 구동 시 아래의 그래프들도 동시에 그려집니다.")
         
-        # 물리 파라미터 세팅 (높이 100m, 수평속도 15m/s)
         g_p = 9.8
         y0_p = 100.0
         v_x_p = 15.0 
@@ -262,61 +262,87 @@ elif page == "중력에 의한 운동":
         x_p_data = v_x_p * t_space_p
         y_p_data = y0_p - 0.5 * g_p * t_space_p**2
         
-        # 단일 캔버스 구조 설계를 위해 go.Figure 생성
-        fig_p = go.Figure()
+        # y축 하방향 속도 데이터 생성
+        v_y_data = -g_p * t_space_p
+        v_x_data = np.full_like(t_space_p, v_x_p)
         
-        # --- [정적 가이드라인 구조] ---
-        # 0번 Trace: 자유낙하 축 타워선 (x = -15 고정)
-        fig_p.add_trace(go.Scatter(x=[-15, -15], y=[0, 100], mode='lines', line=dict(color='darkgray', width=2), showlegend=False, hoverinfo='skip'))
-        # 1번 Trace: 메인 지표면선 (y = 0 고정)
-        fig_p.add_trace(go.Scatter(x=[-25, max(x_p_data)+15], y=[0, 0], mode='lines', line=dict(color='green', width=4), showlegend=False, hoverinfo='skip'))
-        # 2번 Trace: 등속도 레일선 (y = -15 고정)
-        fig_p.add_trace(go.Scatter(x=[0, max(x_p_data)+15], y=[-15, -15], mode='lines', line=dict(color='gray', width=2, dash='solid'), showlegend=False, hoverinfo='skip'))
+        # [혁신] 2행 3열 그리드 구성. 상단(1행)은 시뮬레이터 병합(col1~3), 하단(2행)은 그래프용으로 배분
+        fig_p = make_subplots(
+            rows=2, cols=3,
+            column_widths=[0.33, 0.33, 0.34],
+            row_heights=[0.65, 0.35],
+            horizontal_spacing=0.08,
+            vertical_spacing=0.25,
+            specs=[[{"colspan": 3}, None, None], [{}, None, {}]]  # 2행의 중앙(Col 2)을 비워 양옆으로 그래프 이격 배치
+        )
         
-        # --- [동적 그래픽 요소 (초기 상태 frame_0)] ---
-        # 3번 Trace: 자유낙하 구체 (x = -15 고정)
-        fig_p.add_trace(go.Scatter(x=[-15], y=[y_p_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False))
-        # 4번 Trace: 포물선 합성 궤적 추적선
-        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[y_p_data[0]], mode='lines', line=dict(color='purple', width=2.5, dash='dot'), showlegend=False))
-        # 5번 Trace: 포물선 합성 메인 구체
-        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[y_p_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False))
-        # 6번 Trace: 수평 등속도 구체 (y = -15 고정)
-        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[-15], mode='markers', marker=dict(size=18, color='red'), showlegend=False))
+        # --- [1행: 메인 시뮬레이터 배치] ---
+        # 0번: 자유낙하 축 타워선 (x = -15 고정)
+        fig_p.add_trace(go.Scatter(x=[-15, -15], y=[0, 100], mode='lines', line=dict(color='darkgray', width=2), showlegend=False, hoverinfo='skip'), row=1, col=1)
+        # 1번: 메인 지표면선 (y = 0 고정)
+        fig_p.add_trace(go.Scatter(x=[-25, max(x_p_data)+15], y=[0, 0], mode='lines', line=dict(color='green', width=4), showlegend=False, hoverinfo='skip'), row=1, col=1)
+        # 2번: 등속도 레일선 (y = -15 고정)
+        fig_p.add_trace(go.Scatter(x=[0, max(x_p_data)+15], y=[-15, -15], mode='lines', line=dict(color='gray', width=2, dash='solid'), showlegend=False, hoverinfo='skip'), row=1, col=1)
         
-        # --- [실시간 추적 보조선 (초기 상태 frame_0)] ---
-        # 7번 Trace: 수평 동기화 보조선 (자유낙하공 -> 포물선공)
-        fig_p.add_trace(go.Scatter(x=[-15, x_p_data[0]], y=[y_p_data[0], y_p_data[0]], mode='lines', line=dict(color='rgba(0, 0, 255, 0.6)', width=1.5, dash='dash'), showlegend=False))
-        # 8번 Trace: 연직 동기화 보조선 (등속도공 -> 포물선공)
-        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[-15, y_p_data[0]], mode='lines', line=dict(color='rgba(255,140,0,0.7)', width=1.5, dash='dash'), showlegend=False))
+        # 3번: 자유낙하 구체
+        fig_p.add_trace(go.Scatter(x=[-15], y=[y_p_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
+        # 4번: 포물선 합성 궤적 점선
+        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[y_p_data[0]], mode='lines', line=dict(color='purple', width=2.5, dash='dot'), showlegend=False), row=1, col=1)
+        # 5번: 포물선 합성 메인 구체
+        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[y_p_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
+        # 6번: 수평 등속도 구체
+        fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[-15], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
         
-        # 통합 스크린 안의 텍스트 레이블 좌표 정의
+        # 7번: 수평 동기화 보조선 (자유낙하 -> 포물선)
+        fig_p.add_trace(go.Scatter(x=[-15, x_p_data[0]], y=[y_p_data[0], y_p_data[0]], mode='lines', line=dict(color='rgba(0, 0, 255, 0.6)', width=1.5, dash='dash'), showlegend=False), row=1, col=1)
+        # 8번: 연직 동기화 보조선 (등속도 -> 포물선)
+        fig_p.add_trace(go.Scatter(x=[x_p_data[0], x_p_data[0]], y=[-15, y_p_data[0]], mode='lines', line=dict(color='rgba(255,140,0,0.7)', width=1.5, dash='dash'), showlegend=False), row=1, col=1)
+        
+        # --- [2행: 연직 및 수평 속도-시간 그래프 배치] ---
+        # 9번: (좌측 2행 1열) 연직 방향 자유낙하 v-t 그래프 선 (파란색 매칭)
+        fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_y_data[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
+        # 10번: (좌측 2행 1열) 연직 방향 v-t 마커 점
+        fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_y_data[0]], mode='markers', marker=dict(color='blue', size=8), showlegend=False), row=2, col=1)
+        
+        # 11번: (우측 2행 3열) 수평 방향 등속도 v-t 그래프 선 (초록색 매칭)
+        fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_x_data[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=3)
+        # 12번: (우측 2행 3열) 수평 방향 v-t 마커 점
+        fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_x_data[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=3)
+        
         def get_p_annotations():
             return [
-                dict(x=-15, y=108, text="<b>■ 연직 성분<br>(자유낙하운동)</b>", showarrow=False, font=dict(color="blue", size=13), textangle=0, xanchor="center"),
-                dict(x=max(x_p_data)/2, y=108, text="<b>■ 수평 투사 운동 합성체 (포물선 궤도)</b>", showarrow=False, font=dict(color="purple", size=14), xanchor="center"),
-                dict(x=max(x_p_data)/2, y=-24, text="<b>■ 수평 성분 (등속도운동)</b>", showarrow=False, font=dict(color="green", size=13), xanchor="center")
+                # 1행 시뮬레이터 주석들
+                dict(x=0.03, y=0.98, xref="paper", yref="paper", text="<b>■ 연직(자유낙하)</b>", showarrow=False, font=dict(color="blue", size=13)),
+                dict(x=0.50, y=0.98, xref="paper", yref="paper", text="<b>■ 합성 투사운동 (포물선 궤도)</b>", showarrow=False, font=dict(color="purple", size=15), xanchor="center"),
+                dict(x=0.50, y=0.30, xref="paper", yref="paper", text="<b>■ 수평(등속도)</b>", showarrow=False, font=dict(color="green", size=13), xanchor="center"),
+                # 2행 그래프 주석들
+                dict(x=0.16, y=0.20, xref="paper", yref="paper", text="<b>[연직 성분] 속도-시간 그래프</b>", showarrow=False, font=dict(color="blue", size=14), xanchor="center"),
+                dict(x=0.84, y=0.20, xref="paper", yref="paper", text="<b>[수평 성분] 속도-시간 그래프</b>", showarrow=False, font=dict(color="green", size=14), xanchor="center")
             ]
             
-        # 프레임 순차 배치 동기화 연산 (보조선 좌표 실시간 갱신형 구조)
         frames_p = []
         for i in range(f_count_p):
             frames_p.append(go.Frame(
                 name=f'proj_frame_{i}',
                 data=[
-                    go.Scatter(x=[-15], y=[y_p_data[i]]),                                 # 3번: 자유낙하공 추락
-                    go.Scatter(x=x_p_data[:i+1], y=y_p_data[:i+1]),                       # 4번: 포물선 자국 드로우
-                    go.Scatter(x=[x_p_data[i]], y=[y_p_data[i]]),                         # 5번: 포물선 메인공 이동
-                    go.Scatter(x=[x_p_data[i]], y=[-15]),                                 # 6번: 등속도 레일공 이동
-                    go.Scatter(x=[-15, x_p_data[i]], y=[y_p_data[i], y_p_data[i]]),       # 7번: 수평 파란 점선 연장
-                    go.Scatter(x=[x_p_data[i], x_p_data[i]], y=[-15, y_p_data[i]])        # 8번: 연직 주황 점선 연장
+                    go.Scatter(x=[-15], y=[y_p_data[i]]),                                 # 3번
+                    go.Scatter(x=x_p_data[:i+1], y=y_p_data[:i+1]),                       # 4번
+                    go.Scatter(x=[x_p_data[i]], y=[y_p_data[i]]),                         # 5번
+                    go.Scatter(x=[x_p_data[i]], y=[-15]),                                 # 6번
+                    go.Scatter(x=[-15, x_p_data[i]], y=[y_p_data[i], y_p_data[i]]),       # 7번
+                    go.Scatter(x=[x_p_data[i], x_p_data[i]], y=[-15, y_p_data[i]]),       # 8번
+                    go.Scatter(x=t_space_p[:i+1], y=v_y_data[:i+1]),                      # 9번: 좌측 v-t 그래프 선
+                    go.Scatter(x=[t_space_p[i]], y=[v_y_data[i]]),                        # 10번: 좌측 v-t 마커 점
+                    go.Scatter(x=t_space_p[:i+1], y=v_x_data[:i+1]),                      # 11번: 우측 v-t 그래프 선
+                    go.Scatter(x=[t_space_p[i]], y=[v_x_data[i]])                         # 12번: 우측 v-t 마커 점
                 ],
-                traces=[3, 4, 5, 6, 7, 8],
+                traces=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                 layout=go.Layout(annotations=get_p_annotations())
             ))
         fig_p.frames = frames_p
         
         fig_p.update_layout(
-            height=680,
+            height=900,
             margin=dict(l=50, r=40, t=110, b=50),
             annotations=get_p_annotations(),
             updatemenus=[dict(
@@ -326,11 +352,14 @@ elif page == "중력에 의한 운동":
                     dict(label="⏸️ 일시 정지", method="animate", args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}]),
                     dict(label="🔄 시뮬레이션 초기화", method="animate", args=[["proj_frame_0"], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}])
                 ],
-                direction="left", pad={"r": 10, "t": 10}, x=0.0, y=1.16, xanchor="left", yanchor="top"
+                direction="left", pad={"r": 10, "t": 10}, x=0.0, y=1.10, xanchor="left", yanchor="top"
             )],
-            # 단일 캔버스 축 영역 스케일 정의
-            xaxis=dict(range=[-28, max(x_p_data)+20], title="수평 거리 (m)", fixedrange=True),
-            yaxis=dict(range=[-32, 120], title="연직 높이 (m)", fixedrange=True)
+            xaxis=dict(range=[-28, max(x_p_data)+20], title="수평 이동 거리 (m)", fixedrange=True),
+            yaxis=dict(range=[-32, 120], title="연직 높이 (m)", fixedrange=True),
+            xaxis2=dict(range=[0, t_max_p], title="시간 (s)", fixedrange=True),
+            yaxis2=dict(range=[-50, 5], title="속도 (m/s)", fixedrange=True),
+            xaxis3=dict(range=[0, t_max_p], title="시간 (s)", fixedrange=True),
+            yaxis3=dict(range=[0, 30], title="속도 (m/s)", fixedrange=True)
         )
         st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False})
         
