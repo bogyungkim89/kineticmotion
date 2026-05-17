@@ -157,7 +157,6 @@ if page == "위치/속도/가속도":
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
-    g_default = 9.8 
     tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
     
     # ------------------------------------------
@@ -246,7 +245,7 @@ elif page == "중력에 의한 운동":
         st.plotly_chart(fig_ff, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 2: 포물선운동 (속도-시간 그래프 동기화 하단 배치 완료)
+    # Tab 2: 포물선운동
     # ------------------------------------------
     with tabs[1]:
         st.subheader("■ 포물선운동(수평으로 던진 운동)")
@@ -262,60 +261,41 @@ elif page == "중력에 의한 운동":
         x_p_data = v_x_p * t_space_p
         y_p_data = y0_p - 0.5 * g_p * t_space_p**2
         
-        # y축 하방향 속도 데이터 생성
         v_y_data = -g_p * t_space_p
         v_x_data = np.full_like(t_space_p, v_x_p)
         
-        # [혁신] 2행 3열 그리드 구성. 상단(1행)은 시뮬레이터 병합(col1~3), 하단(2행)은 그래프용으로 배분
         fig_p = make_subplots(
             rows=2, cols=3,
             column_widths=[0.33, 0.33, 0.34],
             row_heights=[0.65, 0.35],
             horizontal_spacing=0.08,
             vertical_spacing=0.25,
-            specs=[[{"colspan": 3}, None, None], [{}, None, {}]]  # 2행의 중앙(Col 2)을 비워 양옆으로 그래프 이격 배치
+            specs=[[{"colspan": 3}, None, None], [{}, None, {}]]
         )
         
-        # --- [1행: 메인 시뮬레이터 배치] ---
-        # 0번: 자유낙하 축 타워선 (x = -15 고정)
         fig_p.add_trace(go.Scatter(x=[-15, -15], y=[0, 100], mode='lines', line=dict(color='darkgray', width=2), showlegend=False, hoverinfo='skip'), row=1, col=1)
-        # 1번: 메인 지표면선 (y = 0 고정)
         fig_p.add_trace(go.Scatter(x=[-25, max(x_p_data)+15], y=[0, 0], mode='lines', line=dict(color='green', width=4), showlegend=False, hoverinfo='skip'), row=1, col=1)
-        # 2번: 등속도 레일선 (y = -15 고정)
         fig_p.add_trace(go.Scatter(x=[0, max(x_p_data)+15], y=[-15, -15], mode='lines', line=dict(color='gray', width=2, dash='solid'), showlegend=False, hoverinfo='skip'), row=1, col=1)
         
-        # 3번: 자유낙하 구체
         fig_p.add_trace(go.Scatter(x=[-15], y=[y_p_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
-        # 4번: 포물선 합성 궤적 점선
         fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[y_p_data[0]], mode='lines', line=dict(color='purple', width=2.5, dash='dot'), showlegend=False), row=1, col=1)
-        # 5번: 포물선 합성 메인 구체
         fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[y_p_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
-        # 6번: 수평 등속도 구체
         fig_p.add_trace(go.Scatter(x=[x_p_data[0]], y=[-15], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
         
-        # 7번: 수평 동기화 보조선 (자유낙하 -> 포물선)
         fig_p.add_trace(go.Scatter(x=[-15, x_p_data[0]], y=[y_p_data[0], y_p_data[0]], mode='lines', line=dict(color='rgba(0, 0, 255, 0.6)', width=1.5, dash='dash'), showlegend=False), row=1, col=1)
-        # 8번: 연직 동기화 보조선 (등속도 -> 포물선)
         fig_p.add_trace(go.Scatter(x=[x_p_data[0], x_p_data[0]], y=[-15, y_p_data[0]], mode='lines', line=dict(color='rgba(255,140,0,0.7)', width=1.5, dash='dash'), showlegend=False), row=1, col=1)
         
-        # --- [2행: 연직 및 수평 속도-시간 그래프 배치] ---
-        # 9번: (좌측 2행 1열) 연직 방향 자유낙하 v-t 그래프 선 (파란색 매칭)
         fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_y_data[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
-        # 10번: (좌측 2행 1열) 연직 방향 v-t 마커 점
         fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_y_data[0]], mode='markers', marker=dict(color='blue', size=8), showlegend=False), row=2, col=1)
         
-        # 11번: (우측 2행 3열) 수평 방향 등속도 v-t 그래프 선 (초록색 매칭)
         fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_x_data[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=3)
-        # 12번: (우측 2행 3열) 수평 방향 v-t 마커 점
         fig_p.add_trace(go.Scatter(x=[t_space_p[0]], y=[v_x_data[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=3)
         
         def get_p_annotations():
             return [
-                # 1행 시뮬레이터 주석들
                 dict(x=0.03, y=0.98, xref="paper", yref="paper", text="<b>■ 연직(자유낙하)</b>", showarrow=False, font=dict(color="blue", size=13)),
                 dict(x=0.50, y=0.98, xref="paper", yref="paper", text="<b>■ 합성 투사운동 (포물선 궤도)</b>", showarrow=False, font=dict(color="purple", size=15), xanchor="center"),
                 dict(x=0.50, y=0.30, xref="paper", yref="paper", text="<b>■ 수평(등속도)</b>", showarrow=False, font=dict(color="green", size=13), xanchor="center"),
-                # 2행 그래프 주석들
                 dict(x=0.16, y=0.20, xref="paper", yref="paper", text="<b>[연직 성분] 속도-시간 그래프</b>", showarrow=False, font=dict(color="blue", size=14), xanchor="center"),
                 dict(x=0.84, y=0.20, xref="paper", yref="paper", text="<b>[수평 성분] 속도-시간 그래프</b>", showarrow=False, font=dict(color="green", size=14), xanchor="center")
             ]
@@ -325,16 +305,16 @@ elif page == "중력에 의한 운동":
             frames_p.append(go.Frame(
                 name=f'proj_frame_{i}',
                 data=[
-                    go.Scatter(x=[-15], y=[y_p_data[i]]),                                 # 3번
-                    go.Scatter(x=x_p_data[:i+1], y=y_p_data[:i+1]),                       # 4번
-                    go.Scatter(x=[x_p_data[i]], y=[y_p_data[i]]),                         # 5번
-                    go.Scatter(x=[x_p_data[i]], y=[-15]),                                 # 6번
-                    go.Scatter(x=[-15, x_p_data[i]], y=[y_p_data[i], y_p_data[i]]),       # 7번
-                    go.Scatter(x=[x_p_data[i], x_p_data[i]], y=[-15, y_p_data[i]]),       # 8번
-                    go.Scatter(x=t_space_p[:i+1], y=v_y_data[:i+1]),                      # 9번: 좌측 v-t 그래프 선
-                    go.Scatter(x=[t_space_p[i]], y=[v_y_data[i]]),                        # 10번: 좌측 v-t 마커 점
-                    go.Scatter(x=t_space_p[:i+1], y=v_x_data[:i+1]),                      # 11번: 우측 v-t 그래프 선
-                    go.Scatter(x=[t_space_p[i]], y=[v_x_data[i]])                         # 12번: 우측 v-t 마커 점
+                    go.Scatter(x=[-15], y=[y_p_data[i]]),                                 
+                    go.Scatter(x=x_p_data[:i+1], y=y_p_data[:i+1]),                       
+                    go.Scatter(x=[x_p_data[i]], y=[y_p_data[i]]),                         
+                    go.Scatter(x=[x_p_data[i]], y=[-15]),                                 
+                    go.Scatter(x=[-15, x_p_data[i]], y=[y_p_data[i], y_p_data[i]]),       
+                    go.Scatter(x=[x_p_data[i], x_p_data[i]], y=[-15, y_p_data[i]]),       
+                    go.Scatter(x=t_space_p[:i+1], y=v_y_data[:i+1]),                      
+                    go.Scatter(x=[t_space_p[i]], y=[v_y_data[i]]),                        
+                    go.Scatter(x=t_space_p[:i+1], y=v_x_data[:i+1]),                      
+                    go.Scatter(x=[t_space_p[i]], y=[v_x_data[i]])                         
                 ],
                 traces=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                 layout=go.Layout(annotations=get_p_annotations())
@@ -362,15 +342,87 @@ elif page == "중력에 의한 운동":
             yaxis3=dict(range=[0, 30], title="속도 (m/s)", fixedrange=True)
         )
         st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False})
-        
+
     # ------------------------------------------
-    # Tab 3: 등속 원운동
+    # Tab 3: 등속 원운동 (슬라이더 제거 및 실시간 벡터 화살표 최적화 개편)
     # ------------------------------------------
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
-        ang = st.slider("각도(도)", 0, 360, 45, key="c_v24")
-        r = np.radians(ang)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[10*np.cos(r)], y=[10*np.sin(r)], mode='markers', marker=dict(size=15, color='red')))
-        fig.update_layout(xaxis=dict(range=[-15, 15]), yaxis=dict(range=[-15, 15]), height=450)
-        st.plotly_chart(fig, use_container_width=True)
+        st.info("💡 **등속 원운동의 핵심**: 물체의 운동 방향(**속도 화살표**)과 힘의 방향(**가속도 화살표**)은 항상 **90°** 직각을 이룹니다. 가속도(구심력)는 언제나 원의 중심을 향합니다.")
+        
+        # 원운동 물리 정적 궤도 파라미터 빌드
+        R_c = 10.0
+        f_count_c = 120 # 부드러운 회전을 위해 120프레임 확장
+        t_space_c = np.linspace(0, 2 * np.pi, f_count_c)
+        
+        x_c_data = R_c * np.cos(t_space_c)
+        y_c_data = R_c * np.sin(t_space_c)
+        
+        fig_c = go.Figure()
+        
+        # [0번 Trace] 원형 배경 궤도선
+        t_track = np.linspace(0, 2 * np.pi, 200)
+        fig_c.add_trace(go.Scatter(x=R_c*np.cos(t_track), y=R_c*np.sin(t_track), mode='lines', line=dict(color='gray', width=1.5, dash='dash'), showlegend=False, hoverinfo='skip'))
+        # [1번 Trace] 원의 중심점
+        fig_c.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(size=6, color='black'), showlegend=False, hoverinfo='skip'))
+        # [2번 Trace] 원운동을 전개할 메인 빨간 공
+        fig_c.add_trace(go.Scatter(x=[x_c_data[0]], y=[y_c_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False))
+        
+        # 매 프레임마다 속도(접선) 및 가속도(구심) 벡터를 그려줄 어노테이션 팩토리 정의
+        def get_circular_vector_annotations(cx, cy, theta):
+            arrow_scale = 4.5
+            
+            # 속도 벡터: 접선 방향 (-sinθ, cosθ)
+            vx = -arrow_scale * np.sin(theta)
+            vy = arrow_scale * np.cos(theta)
+            
+            # 가속도 벡터: 중심 방향 (-cosθ, -sinθ)
+            ax_v = -arrow_scale * np.cos(theta)
+            ay_v = -arrow_scale * np.sin(theta)
+            
+            # 90도 직각 직관 레이블 배치 위치 (물체 안쪽 중심 방향 시프트)
+            text_x = cx * 0.82
+            text_y = cy * 0.82
+            
+            return [
+                # 1. 속도 벡터 화살표 (초록색)
+                dict(x=cx + vx, y=cy + vy, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="green", text="<b>v (속도)</b>", font=dict(color="green", size=13), yanchor="bottom"),
+                # 2. 가속도 벡터 화살표 (주황색)
+                dict(x=cx + ax_v, y=cy + ay_v, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="orange", text="<b>a (가속도)</b>", font=dict(color="orange", size=13), xanchor="right"),
+                # 3. [요청사항] 두 벡터 사이가 언제나 90도 직각임을 명시하는 인디케이터
+                dict(x=text_x, y=text_y, text="<b>90°</b>", showarrow=False, font=dict(color="red", size=15))
+            ]
+            
+        # 프레임 순차 배치 링킹 연산
+        frames_c = []
+        for i in range(f_count_c):
+            th = t_space_c[i]
+            cx = x_c_data[i]
+            cy = y_c_data[i]
+            frames_c.append(go.Frame(
+                name=f'circle_frame_{i}',
+                data=[go.Scatter(x=[cx], y=[cy])], # 빨간 공 좌표 업데이트
+                traces=[2],
+                layout=go.Layout(annotations=get_circular_vector_annotations(cx, cy, th))
+            ))
+        fig_c.frames = frames_c
+        
+        # 레이아웃 구성 (정방형 1:1 종횡비 잠금)
+        fig_c.update_layout(
+            height=650,
+            margin=dict(l=50, r=40, t=110, b=50),
+            annotations=get_circular_vector_annotations(x_c_data[0], y_c_data[0], t_space_c[0]),
+            updatemenus=[dict(
+                type="buttons",
+                buttons=[
+                    dict(label="🚀 회전 시작", method="animate", args=[None, {"frame": {"duration": 35, "redraw": False}, "fromcurrent": True, "transition": {"duration": 0}}]),
+                    dict(label="⏸️ 일시 정지", method="animate", args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}]),
+                    dict(label="🔄 시뮬레이션 초기화", method="animate", args=[["circle_frame_0"], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}])
+                ],
+                direction="left", pad={"r": 10, "t": 10}, x=0.0, y=1.14, xanchor="left", yanchor="top"
+            )],
+            # scaleanchor와 scaleratio를 결합하여 완벽한 원으로 레이아웃 고정
+            xaxis=dict(range=[-17, 17], scaleanchor="y", scaleratio=1, title="X 위치 (m)", fixedrange=True),
+            yaxis=dict(range=[-17, 17], title="Y 위치 (m)", fixedrange=True)
+        )
+        st.plotly_chart(fig_c, use_container_width=True, config={'displayModeBar': False})
