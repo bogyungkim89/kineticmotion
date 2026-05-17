@@ -157,26 +157,26 @@ if page == "위치/속도/가속도":
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
-    g_default = 9.8 
     tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
     
     # ------------------------------------------
-    # Tab 1: 자유낙하운동 (지구 가속도 선택 버튼 제거 및 st.info 통합)
+    # Tab 1: 자유낙하운동
     # ------------------------------------------
     with tabs[0]:
         st.subheader("■ 자유낙하운동(등가속도직선운동)")
-        
-        st.markdown("### ⚙️ 가속도 설정")
-        # [수정] 버튼이 삭제되었으므로 슬라이더가 단독으로 상단을 넓게 차지하도록 배치
-        g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_v7")
-        st.session_state.g_val = g_input
-        
-        # [요청사항] 언제나 하늘색 네모(st.info)가 유지되며, 아랫줄에 빨간색으로 지구 중력 가속도가 고정 표시됨
+        col_slider, col_btn = st.columns([3, 1])
+        with col_slider:
+            g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_v7")
+            st.session_state.g_val = g_input
+        with col_btn:
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+            if st.button("🌍 지구 중력 가속도 선택 (9.8 m/s²)", use_container_width=True):
+                st.session_state.g_val = 9.8
+                st.rerun()
+
         st.info(f"현재 가속도 설정값: {g_input} m/s²\n\n:red[지구 중력 가속도: 9.8 m/s²]")
-            
         st.markdown("---")
 
-        # 물리 데이터 프리-컴파일 연산
         y_start = 100.0  
         g_curr = st.session_state.g_val
         t_max = np.sqrt(2 * y_start / g_curr)
@@ -187,12 +187,7 @@ elif page == "중력에 의한 운동":
         v_space = -g_curr * t_space  
         a_space = np.full_like(t_space, -g_curr)
         
-        fig_ff = make_subplots(
-            rows=1, cols=4,
-            column_widths=[0.14, 0.28, 0.28, 0.28],
-            horizontal_spacing=0.06
-        )
-        
+        fig_ff = make_subplots(rows=1, cols=4, column_widths=[0.14, 0.28, 0.28, 0.28], horizontal_spacing=0.06)
         fig_ff.add_trace(go.Scatter(x=[-0.5, 0.5], y=[0, 0], mode='lines', line=dict(color='green', width=6), showlegend=False, hoverinfo='skip'), row=1, col=1)
         fig_ff.add_trace(go.Scatter(x=[0], y=[y_space[0]], mode='markers', marker=dict(size=22, color='red'), showlegend=False), row=1, col=1)
         
@@ -231,9 +226,7 @@ elif page == "중력에 의한 운동":
         fig_ff.frames = frames_ff
         
         fig_ff.update_layout(
-            height=680,
-            margin=dict(l=40, r=20, t=110, b=50), 
-            annotations=get_ff_annotations(),
+            height=680, margin=dict(l=40, r=20, t=110, b=50), annotations=get_ff_annotations(),
             updatemenus=[dict(
                 type="buttons",
                 buttons=[
@@ -249,20 +242,104 @@ elif page == "중력에 의한 운동":
             xaxis3=dict(range=[0, t_max], title="시간 (s)", fixedrange=True), yaxis3=dict(range=[min(v_space)-5, 5], title="속도 (m/s)", fixedrange=True),
             xaxis4=dict(range=[0, t_max], title="시간 (s)", fixedrange=True), yaxis4=dict(range=[-30, 5], title="가속도 (m/s²)", fixedrange=True)
         )
-        
         st.plotly_chart(fig_ff, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 2 & 3: 포물선 및 등속 원운동
+    # Tab 2: 포물선운동 (수평 투사 결합 시뮬레이터 개편 완료)
     # ------------------------------------------
     with tabs[1]:
         st.subheader("■ 포물선운동(수평으로 던진 운동)")
-        t_p = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v24")
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[10*t_p], y=[44.1-0.5*g_default*t_p**2], mode='markers', marker=dict(size=15, color='red')))
-        fig.update_layout(xaxis=dict(range=[0, 40], title="수평 거리 (m)"), yaxis=dict(range=[0, 50], title="연직 높이 (m)"), height=450)
-        st.plotly_chart(fig, use_container_width=True)
+        st.info("💡 **수평 투사 운동의 성분 분해**: 수평 방향의 **등속도 운동**과 연직 방향의 **자유낙하 운동**이 동시에 결합된 운동입니다.")
         
+        # 물리 파라미터 고정 세팅 (높이 100m, 수평 초기속도 15m/s)
+        g_proj = 9.8
+        y0_proj = 100.0
+        v_x_proj = 15.0 
+        t_max_proj = np.sqrt(2 * y0_proj / g_proj)
+        f_count_proj = 100
+        
+        t_space_p = np.linspace(0, t_max_proj, f_count_proj)
+        x_proj_data = v_x_proj * t_space_p
+        y_proj_data = y0_proj - 0.5 * g_proj * t_space_p**2
+        
+        # 2행 2열 비대칭 그리드 구조 구축 (Row2-Col1 은 공백 비우기)
+        fig_p = make_subplots(
+            rows=2, cols=2,
+            column_widths=[0.16, 0.84],
+            row_heights=[0.72, 0.28],
+            horizontal_spacing=0.08,
+            vertical_spacing=0.15,
+            specs=[[{}, {}], [None, {}]]
+        )
+        
+        # --- [초기화 트레이스 배치] ---
+        # [0번] 자유낙하(연직) 지표면 바닥
+        fig_p.add_trace(go.Scatter(x=[-0.5, 0.5], y=[0, 0], mode='lines', line=dict(color='green', width=5), showlegend=False, hoverinfo='skip'), row=1, col=1)
+        # [1번] 자유낙하(연직) 빨간 공
+        fig_p.add_trace(go.Scatter(x=[0], y=[y_proj_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=1)
+        
+        # [2번] 포물선(합성) 지표면 바닥
+        fig_p.add_trace(go.Scatter(x=[-5, max(x_proj_data)+10], y=[0, 0], mode='lines', line=dict(color='green', width=5), showlegend=False, hoverinfo='skip'), row=1, col=2)
+        # [3번] 포물선(합성) 점선 추적 궤적선
+        fig_p.add_trace(go.Scatter(x=[x_proj_data[0]], y=[y_proj_data[0]], mode='lines', line=dict(color='purple', width=2, dash='dot'), showlegend=False), row=1, col=2)
+        # [4번] 포물선(합성) 메인 빨간 공
+        fig_p.add_trace(go.Scatter(x=[x_proj_data[0]], y=[y_proj_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=1, col=2)
+        
+        # [5번] 등속도(수평) 안내 레일 가이드선
+        fig_p.add_trace(go.Scatter(x=[-5, max(x_proj_data)+10], y=[0, 0], mode='lines', line=dict(color='gray', width=2), showlegend=False, hoverinfo='skip'), row=2, col=2)
+        # [6번] 등속도(수평) 빨간 공
+        fig_p.add_trace(go.Scatter(x=[x_proj_data[0]], y=[0], mode='markers', marker=dict(size=18, color='red'), showlegend=False), row=2, col=2)
+        
+        # 상단 고정형 분석 글자 타이틀 구조화 정의
+        def get_p_annotations():
+            return [
+                dict(x=0.08, y=1.06, xref="paper", yref="paper", text="<b>■ 연직 성분 (자유낙하운동)</b>", showarrow=False, font=dict(color="blue", size=14), xanchor="center"),
+                dict(x=0.58, y=1.06, xref="paper", yref="paper", text="<b>■ 합성 투사 운동 (포물선 궤도)</b>", showarrow=False, font=dict(color="purple", size=14), xanchor="center"),
+                dict(x=0.58, y=0.28, xref="paper", yref="paper", text="<b>■ 수평 성분 (등속도운동)</b>", showarrow=False, font=dict(color="green", size=14), xanchor="center")
+            ]
+            
+        # 프레임 순차 데이터 링킹 동기화 (깜빡임 차단 핵심 파트)
+        frames_p = []
+        for i in range(f_count_proj):
+            frames_p.append(go.Frame(
+                name=f'proj_frame_{i}',
+                data=[
+                    go.Scatter(x=[0], y=[y_proj_data[i]]),                      # [1번] 자유낙하 공 하강
+                    go.Scatter(x=x_proj_data[:i+1], y=y_proj_data[:i+1]),      # [3번] 포물선 선 누적
+                    go.Scatter(x=[x_proj_data[i]], y=[y_proj_data[i]]),        # [4번] 포물선 메인 공 전진
+                    go.Scatter(x=[x_proj_data[i]], y=[0])                      # [6번] 등속도 바닥 공 전진
+                ],
+                traces=[1, 3, 4, 6],
+                layout=go.Layout(annotations=get_p_annotations())
+            ))
+        fig_p.frames = frames_p
+        
+        fig_p.update_layout(
+            height=720,
+            margin=dict(l=50, r=30, t=110, b=50),
+            annotations=get_p_annotations(),
+            updatemenus=[dict(
+                type="buttons",
+                buttons=[
+                    dict(label="🚀 발사 및 투사 시작", method="animate", args=[None, {"frame": {"duration": 35, "redraw": False}, "fromcurrent": True, "transition": {"duration": 0}}]),
+                    dict(label="⏸️ 일시 정지", method="animate", args=[[None], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}]),
+                    dict(label="🔄 시뮬레이션 초기화", method="animate", args=[["proj_frame_0"], {"frame": {"duration": 0, "redraw": False}, "mode": "immediate", "transition": {"duration": 0}}])
+                ],
+                direction="left", pad={"r": 10, "t": 10}, x=0.0, y=1.16, xanchor="left", yanchor="top"
+            )],
+            # 각 격리 축 뷰포트 정밀 고정 및 가이드화
+            xaxis=dict(range=[-1, 1], showticklabels=False, fixedrange=True),
+            yaxis=dict(range=[-5, 115], title="연직 높이 (m)", fixedrange=True),
+            xaxis2=dict(range=[-5, max(x_proj_data)+10], fixedrange=True),
+            yaxis2=dict(range=[-5, 115], showticklabels=False, fixedrange=True),
+            xaxis3=dict(range=[-5, max(x_proj_data)+10], title="수평 이동 거리 (m)", fixedrange=True),
+            yaxis3=dict(range=[-1, 1], showticklabels=False, fixedrange=True)
+        )
+        st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False})
+        
+    # ------------------------------------------
+    # Tab 3: 등속 원운동
+    # ------------------------------------------
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
         ang = st.slider("각도(도)", 0, 360, 45, key="c_v24")
