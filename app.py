@@ -157,6 +157,7 @@ if page == "위치/속도/가속도":
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
+    g_default = 9.8 
     tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
     
     # ------------------------------------------
@@ -344,7 +345,7 @@ elif page == "중력에 의한 운동":
         st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 3: 등속 원운동 (x/y축 제거 및 벡터 레이블 겹침 해결)
+    # Tab 3: 등속 원운동
     # ------------------------------------------
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
@@ -361,59 +362,86 @@ elif page == "중력에 의한 운동":
         
         t_track = np.linspace(0, 2 * np.pi, 200)
         fig_c.add_trace(go.Scatter(x=R_c*np.cos(t_track), y=R_c*np.sin(t_track), mode='lines', line=dict(color='gray', width=1.5, dash='dash'), showlegend=False, hoverinfo='skip'))
-        fig_c.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(size=6, color='black'), showlegend=False, hoverinfo='skip'))
+        fig_c.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(size=8, color='black'), showlegend=False, hoverinfo='skip'))
         fig_c.add_trace(go.Scatter(x=[x_c_data[0]], y=[y_c_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False))
         
-        # [💡 수정 사항] 텍스트 레이블의 좌표를 화살표 꼬리(중심)가 아닌 화살표 끝(머리)으로 밀어내어 분리함
-        def get_circular_vector_annotations(cx, cy, theta):
+        # [💡 추가 Trace] 90도 직각 기호를 그리기 위한 실시간 라인 Trace를 새롭게 추가합니다.
+        fig_c.add_trace(go.Scatter(x=[], y=[], mode='lines', line=dict(color='red', width=2), showlegend=False, hoverinfo='skip'))
+        
+        def get_circular_vector_data(cx, cy, theta):
             arrow_scale = 4.5
-            
+            # 속도 벡터 (접선 방향)
             vx = -arrow_scale * np.sin(theta)
             vy = arrow_scale * np.cos(theta)
             
+            # 가속도 벡터 (중심 방향)
             ax_v = -arrow_scale * np.cos(theta)
             ay_v = -arrow_scale * np.sin(theta)
             
-            # v(속도) 라벨 좌표: 원 궤도 바깥쪽 (접선 화살표의 끝부분 근처)
+            # 1. v(속도) 텍스트 좌표: 원 바깥쪽 여유 있게 배치
             v_text_x = cx + vx * 1.15
             v_text_y = cy + vy * 1.15
             
-            # a(가속도) 라벨 좌표: 원 궤도 안쪽 (가속도 화살표의 끝부분/중심 근처)
-            a_text_x = cx + ax_v * 0.7
-            a_text_y = cy + ay_v * 0.7
+            # 2. a(가속도) 텍스트 좌표: 화살표를 지나 아예 원의 중심(0, 0) 근처로 이동시킴 (물체와 절대 겹치지 않게)
+            a_text_x = ax_v * 1.15 
+            a_text_y = ay_v * 1.15 
             
-            text_x = cx * 0.82
-            text_y = cy * 0.82
+            # 3. 직각(90도) 기호 폴리곤 꼭짓점 계산 (단위 벡터의 합을 이용해 코너 좌표 연산)
+            square_size = 1.0  # 직각 기호의 크기
+            u_v_x, u_v_y = vx / arrow_scale, vy / arrow_scale # 속도 방향 단위 벡터
+            u_a_x, u_a_y = ax_v / arrow_scale, ay_v / arrow_scale # 가속도 방향 단위 벡터
             
-            return [
-                # 화살표 드로우 (글씨는 제거)
-                dict(x=cx + vx, y=cy + vy, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="green"),
-                dict(x=cx + ax_v, y=cy + ay_v, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="orange"),
-                
-                # [💡 독립된 텍스트 레이블] 위치를 화살표 머리 기준으로 띄워서 겹침 완전 방지
-                dict(x=v_text_x, y=v_text_y, text="<b>v (속도)</b>", showarrow=False, font=dict(color="green", size=14)),
-                dict(x=a_text_x, y=a_text_y, text="<b>a (가속도)</b>", showarrow=False, font=dict(color="orange", size=14)),
-                
-                dict(x=text_x, y=text_y, text="<b>90°</b>", showarrow=False, font=dict(color="red", size=15))
-            ]
+            # 세 개의 점(직각의 꼭짓점들) 계산
+            pt1_x = cx + u_v_x * square_size
+            pt1_y = cy + u_v_y * square_size
+            
+            pt2_x = cx + u_v_x * square_size + u_a_x * square_size
+            pt2_y = cy + u_v_y * square_size + u_a_y * square_size
+            
+            pt3_x = cx + u_a_x * square_size
+            pt3_y = cy + u_a_y * square_size
+            
+            return vx, vy, ax_v, ay_v, v_text_x, v_text_y, a_text_x, a_text_y, [pt1_x, pt2_x, pt3_x], [pt1_y, pt2_y, pt3_y]
             
         frames_c = []
         for i in range(f_count_c):
             th = t_space_c[i]
             cx = x_c_data[i]
             cy = y_c_data[i]
+            
+            vx, vy, ax_v, ay_v, v_tx, v_ty, a_tx, a_ty, sq_x, sq_y = get_circular_vector_data(cx, cy, th)
+            
             frames_c.append(go.Frame(
                 name=f'circle_frame_{i}',
-                data=[go.Scatter(x=[cx], y=[cy])], 
-                traces=[2],
-                layout=go.Layout(annotations=get_circular_vector_annotations(cx, cy, th))
+                data=[
+                    go.Scatter(x=[cx], y=[cy]), # 2번 트레이스 (메인 공)
+                    go.Scatter(x=sq_x, y=sq_y)  # 3번 트레이스 (90도 꺾쇠 기호)
+                ], 
+                traces=[2, 3],
+                layout=go.Layout(annotations=[
+                    dict(x=cx + vx, y=cy + vy, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="green"),
+                    dict(x=cx + ax_v, y=cy + ay_v, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="orange"),
+                    dict(x=v_tx, y=v_ty, text="<b>v (속도)</b>", showarrow=False, font=dict(color="green", size=14)),
+                    # [💡 적용 완료] 가속도 글씨를 중심 부근으로 이동
+                    dict(x=a_tx, y=a_ty, text="<b>a (가속도)</b>", showarrow=False, font=dict(color="orange", size=14))
+                ])
             ))
         fig_c.frames = frames_c
+        
+        # 초기화면 드로우
+        _, _, _, _, v_tx0, v_ty0, a_tx0, a_ty0, sq_x0, sq_y0 = get_circular_vector_data(x_c_data[0], y_c_data[0], t_space_c[0])
+        fig_c.data[3].x = sq_x0
+        fig_c.data[3].y = sq_y0
         
         fig_c.update_layout(
             height=650,
             margin=dict(l=50, r=40, t=110, b=50),
-            annotations=get_circular_vector_annotations(x_c_data[0], y_c_data[0], t_space_c[0]),
+            annotations=[
+                dict(x=x_c_data[0] - 4.5*np.sin(0), y=y_c_data[0] + 4.5*np.cos(0), ax=x_c_data[0], ay=y_c_data[0], xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="green"),
+                dict(x=x_c_data[0] - 4.5*np.cos(0), y=y_c_data[0] - 4.5*np.sin(0), ax=x_c_data[0], ay=y_c_data[0], xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="orange"),
+                dict(x=v_tx0, y=v_ty0, text="<b>v (속도)</b>", showarrow=False, font=dict(color="green", size=14)),
+                dict(x=a_tx0, y=a_ty0, text="<b>a (가속도)</b>", showarrow=False, font=dict(color="orange", size=14))
+            ],
             updatemenus=[dict(
                 type="buttons",
                 buttons=[
@@ -423,7 +451,6 @@ elif page == "중력에 의한 운동":
                 ],
                 direction="left", pad={"r": 10, "t": 10}, x=0.0, y=1.14, xanchor="left", yanchor="top"
             )],
-            # [💡 수정 완료] showticklabels=False 속성으로 x축과 y축 눈금/숫자를 완전히 보이지 않게 처리
             xaxis=dict(range=[-17, 17], scaleanchor="y", scaleratio=1, showticklabels=False, fixedrange=True, zeroline=False, showgrid=False),
             yaxis=dict(range=[-17, 17], showticklabels=False, fixedrange=True, zeroline=False, showgrid=False)
         )
