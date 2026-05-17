@@ -157,7 +157,6 @@ if page == "위치/속도/가속도":
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
-    g_default = 9.8 
     tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
     
     # ------------------------------------------
@@ -345,7 +344,7 @@ elif page == "중력에 의한 운동":
         st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 3: 등속 원운동
+    # Tab 3: 등속 원운동 (가속도 텍스트 동적 위치 전면 수정)
     # ------------------------------------------
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
@@ -365,33 +364,32 @@ elif page == "중력에 의한 운동":
         fig_c.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(size=8, color='black'), showlegend=False, hoverinfo='skip'))
         fig_c.add_trace(go.Scatter(x=[x_c_data[0]], y=[y_c_data[0]], mode='markers', marker=dict(size=18, color='red'), showlegend=False))
         
-        # [💡 추가 Trace] 90도 직각 기호를 그리기 위한 실시간 라인 Trace를 새롭게 추가합니다.
         fig_c.add_trace(go.Scatter(x=[], y=[], mode='lines', line=dict(color='red', width=2), showlegend=False, hoverinfo='skip'))
         
+        # [💡 계산식 전면 교정] 글씨 좌표 연산 시 cx, cy 기준좌표를 다시 더하여 가속도 화살표와 한 축에 나란히 놓이게 처리함
         def get_circular_vector_data(cx, cy, theta):
             arrow_scale = 4.5
-            # 속도 벡터 (접선 방향)
+            
             vx = -arrow_scale * np.sin(theta)
             vy = arrow_scale * np.cos(theta)
             
-            # 가속도 벡터 (중심 방향)
             ax_v = -arrow_scale * np.cos(theta)
             ay_v = -arrow_scale * np.sin(theta)
             
-            # 1. v(속도) 텍스트 좌표: 원 바깥쪽 여유 있게 배치
+            # 1. v(속도) 텍스트 좌표: 원 바깥쪽 (접선 방향 화살표 머리 바깥 부분)
             v_text_x = cx + vx * 1.15
             v_text_y = cy + vy * 1.15
             
-            # 2. a(가속도) 텍스트 좌표: 화살표를 지나 아예 원의 중심(0, 0) 근처로 이동시킴 (물체와 절대 겹치지 않게)
-            a_text_x = ax_v * 1.15 
-            a_text_y = ay_v * 1.15 
+            # 2. [요청사항] a(가속도) 텍스트 좌표: 가속도 화살표와 같은 방향에 있도록 수정
+            # cx, cy(물체 위치)에서 원 중심(0,0) 방향으로 뻗은 가속도 벡터 연장선상(화살표 촉 뒤쪽)에 안착
+            a_text_x = cx + ax_v * 1.35
+            a_text_y = cy + ay_v * 1.35
             
-            # 3. 직각(90도) 기호 폴리곤 꼭짓점 계산 (단위 벡터의 합을 이용해 코너 좌표 연산)
-            square_size = 1.0  # 직각 기호의 크기
-            u_v_x, u_v_y = vx / arrow_scale, vy / arrow_scale # 속도 방향 단위 벡터
-            u_a_x, u_a_y = ax_v / arrow_scale, ay_v / arrow_scale # 가속도 방향 단위 벡터
+            # 3. 직각(90도) ㄱ자 기호 좌표 연산
+            square_size = 1.0
+            u_v_x, u_v_y = vx / arrow_scale, vy / arrow_scale 
+            u_a_x, u_a_y = ax_v / arrow_scale, ay_v / arrow_scale 
             
-            # 세 개의 점(직각의 꼭짓점들) 계산
             pt1_x = cx + u_v_x * square_size
             pt1_y = cy + u_v_y * square_size
             
@@ -414,21 +412,20 @@ elif page == "중력에 의한 운동":
             frames_c.append(go.Frame(
                 name=f'circle_frame_{i}',
                 data=[
-                    go.Scatter(x=[cx], y=[cy]), # 2번 트레이스 (메인 공)
-                    go.Scatter(x=sq_x, y=sq_y)  # 3번 트레이스 (90도 꺾쇠 기호)
+                    go.Scatter(x=[cx], y=[cy]), 
+                    go.Scatter(x=sq_x, y=sq_y)  
                 ], 
                 traces=[2, 3],
                 layout=go.Layout(annotations=[
                     dict(x=cx + vx, y=cy + vy, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="green"),
                     dict(x=cx + ax_v, y=cy + ay_v, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="orange"),
                     dict(x=v_tx, y=v_ty, text="<b>v (속도)</b>", showarrow=False, font=dict(color="green", size=14)),
-                    # [💡 적용 완료] 가속도 글씨를 중심 부근으로 이동
+                    # [💡 적용 완료] 원 중심 기준, 가속도 화살표와 완벽하게 같은 방향(Quadrant)선상에 텍스트 표기
                     dict(x=a_tx, y=a_ty, text="<b>a (가속도)</b>", showarrow=False, font=dict(color="orange", size=14))
                 ])
             ))
         fig_c.frames = frames_c
         
-        # 초기화면 드로우
         _, _, _, _, v_tx0, v_ty0, a_tx0, a_ty0, sq_x0, sq_y0 = get_circular_vector_data(x_c_data[0], y_c_data[0], t_space_c[0])
         fig_c.data[3].x = sq_x0
         fig_c.data[3].y = sq_y0
