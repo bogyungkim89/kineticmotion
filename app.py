@@ -14,7 +14,7 @@ st.sidebar.title("📚 학습 메뉴")
 page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["위치/속도/가속도", "중력에 의한 운동"])
 
 # ==========================================
-# 1페이지: 위치/속도/가속도
+# 1페이지: 위치/속도/가속도 (위치 그래프 실시간 드로우 복구)
 # ==========================================
 if page == "위치/속도/가속도":
     st.title("📈 물체의 운동에 따른 시뮬레이션과 위치/속도/가속도 분석")
@@ -43,16 +43,22 @@ if page == "위치/속도/가속도":
             vertical_spacing=0.25
         )
 
+        # [0~3번 트레이스] 가이드 가로선 및 연한 점선 배경
         fig.add_trace(go.Scatter(x=[-50, 50], y=[0, 0], mode='lines', line=dict(color='gray', width=2), showlegend=False, hoverinfo='skip'), row=1, col=1)
-        fig.add_trace(go.Scatter(x=t_arr, y=x_arr, mode='lines', line=dict(color='rgba(0,0,255,0.4)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=1)
-        fig.add_trace(go.Scatter(x=t_arr, y=v_arr, mode='lines', line=dict(color='rgba(200,200,200,0.3)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=2)
-        fig.add_trace(go.Scatter(x=t_arr, y=a_arr, mode='lines', line=dict(color='rgba(200,200,200,0.3)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=3)
+        fig.add_trace(go.Scatter(x=t_arr, y=x_arr, mode='lines', line=dict(color='rgba(0,0,255,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=1)
+        fig.add_trace(go.Scatter(x=t_arr, y=v_arr, mode='lines', line=dict(color='rgba(0,128,0,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=2)
+        fig.add_trace(go.Scatter(x=t_arr, y=a_arr, mode='lines', line=dict(color='rgba(255,165,0,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=3)
 
+        # [4번 트레이스] 움직이는 빨간 점 (물체)
         fig.add_trace(go.Scatter(x=[x_arr[0]], y=[0], mode='markers', marker=dict(size=20, color='red'), showlegend=False), row=1, col=1)
         
+        # [5~7번 트레이스] 실시간으로 채워질 실선 (위치, 속도, 가속도 모두 배치)
+        fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='lines', line=dict(color='orange', width=3.5), showlegend=False), row=2, col=3)
 
+        # [8~10번 트레이스] 현재 프레임 위치 추적 마커 점 (위치, 속도, 가속도 모두 배치)
+        fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='markers', marker=dict(color='blue', size=8), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=2, col=3)
 
@@ -84,16 +90,19 @@ if page == "위치/속도/가속도":
                 )
             )
 
+            # [💡 수정 완료] traces 4번부터 10번까지 위치-시간 선(5) 및 점(8) 데이터를 정확하게 순차 매핑합니다.
             frames.append(go.Frame(
                 name=f'frame_{i}',
                 data=[
-                    go.Scatter(x=[x_arr[i]], y=[0]),
-                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]),
-                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]),
-                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),
-                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])
+                    go.Scatter(x=[x_arr[i]], y=[0]),           # 4번: 물체
+                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), # 5번: 위치 선 실시간
+                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), # 6번: 속도 선 실시간
+                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), # 7번: 가속도 선 실시간
+                    go.Scatter(x=[t_arr[i]], y=[x_arr[i]]),   # 8번: 위치 마커 점
+                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),   # 9번: 속도 마커 점
+                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])    # 10번: 가속도 마커 점
                 ],
-                traces=[4, 5, 6, 7, 8], 
+                traces=[4, 5, 6, 7, 8, 9, 10], 
                 layout=go.Layout(annotations=frame_annotations)
             ))
         fig.frames = frames
@@ -150,7 +159,7 @@ if page == "위치/속도/가속도":
         st.markdown(table_html, unsafe_allow_html=True)
 
 # ==========================================
-# 2페이지: 중력에 의한 운동
+# 2페이지: 중력에 의한 운동 (여백 분리 보완 버전)
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
@@ -160,11 +169,11 @@ elif page == "중력에 의한 운동":
     with tabs[0]:
         st.subheader("■ 자유낙하운동(등가속도직선운동)")
         
-        # 1. [상단] 가속도 슬라이더와 지구 가속도 선택 버튼
+        # 1. 가속도 조절바 및 리셋 단추 상단 레이아웃
         col_slider, col_btn = st.columns([3, 1])
         
         with col_slider:
-            g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_v5")
+            g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_v6")
             st.session_state.g_val = g_input
         
         with col_btn:
@@ -180,7 +189,7 @@ elif page == "중력에 의한 운동":
             
         st.markdown("---")
 
-        # 2. 물리 데이터 프리-컴파일 연산
+        # 2. 물리 궤적 데이터 사전 연산
         y_start = 100.0  
         g_curr = st.session_state.g_val
         t_max = np.sqrt(2 * y_start / g_curr)
@@ -191,6 +200,7 @@ elif page == "중력에 의한 운동":
         v_space = -g_curr * t_space  
         a_space = np.full_like(t_space, -g_curr)
         
+        # 1행 4열 수직 종횡비 레이아웃 빌드
         fig_ff = make_subplots(
             rows=1, cols=4,
             column_widths=[0.14, 0.28, 0.28, 0.28],
@@ -208,7 +218,6 @@ elif page == "중력에 의한 운동":
         fig_ff.add_trace(go.Scatter(x=[t_space[0]], y=[v_space[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=1, col=3)
         fig_ff.add_trace(go.Scatter(x=[t_space[0]], y=[a_space[0]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=1, col=4)
         
-        # 고정 제목 어노테이션 위치 고정 (y=1.05)
         def get_ff_annotations():
             return [
                 dict(x=0.07, y=1.05, xref="paper", yref="paper", text="<b>■ 자유낙하 시뮬레이션</b>", showarrow=False, font=dict(color="black", size=14), xanchor="center"),
@@ -235,7 +244,7 @@ elif page == "중력에 의한 운동":
             ))
         fig_ff.frames = frames_ff
         
-        # [💡 수정 완료] 상단 마진을 t=110으로 대폭 늘리고, 버튼들의 높이를 y=1.18로 위로 끌어올려 글자들과 완벽 분리했습니다.
+        # 버튼(y=1.18)과 제목(y=1.05) 사이 여백 격리 고정
         fig_ff.update_layout(
             height=680,
             margin=dict(l=40, r=20, t=110, b=50), 
@@ -259,11 +268,11 @@ elif page == "중력에 의한 운동":
         st.plotly_chart(fig_ff, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 2 & 3: 포물선 및 등속 원운동 (기존 규격 보존)
+    # Tab 2 & 3: 포물선 및 등속 원운동 (기존 기능 유지)
     # ------------------------------------------
     with tabs[1]:
         st.subheader("■ 포물선운동(수평으로 던진 운동)")
-        t_p = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v23")
+        t_p = st.slider("시간(s)", 0.0, 3.0, 1.5, key="p_v24")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[10*t_p], y=[44.1-0.5*g_default*t_p**2], mode='markers', marker=dict(size=15, color='red')))
         fig.update_layout(xaxis=dict(range=[0, 40], title="수평 거리 (m)"), yaxis=dict(range=[0, 50], title="연직 높이 (m)"), height=450)
@@ -271,7 +280,7 @@ elif page == "중력에 의한 운동":
         
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
-        ang = st.slider("각도(도)", 0, 360, 45, key="c_v23")
+        ang = st.slider("각도(도)", 0, 360, 45, key="c_v24")
         r = np.radians(ang)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=[10*np.cos(r)], y=[10*np.sin(r)], mode='markers', marker=dict(size=15, color='red')))
