@@ -14,7 +14,7 @@ st.sidebar.title("📚 학습 메뉴")
 page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["위치/속도/가속도", "중력에 의한 운동"])
 
 # ==========================================
-# 1페이지: 위치/속도/가속도
+# 1페이지: 위치/속도/가속도 (버그 완전 해결 완료)
 # ==========================================
 if page == "위치/속도/가속도":
     st.title("📈 물체의 운동에 따른 시뮬레이션과 위치/속도/가속도 분석")
@@ -43,17 +43,21 @@ if page == "위치/속도/가속도":
             vertical_spacing=0.25
         )
 
+        # [0~3번 트레이스] 배경 가이드라인
         fig.add_trace(go.Scatter(x=[-50, 50], y=[0, 0], mode='lines', line=dict(color='gray', width=2), showlegend=False, hoverinfo='skip'), row=1, col=1)
         fig.add_trace(go.Scatter(x=t_arr, y=x_arr, mode='lines', line=dict(color='rgba(0,0,255,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=1)
         fig.add_trace(go.Scatter(x=t_arr, y=v_arr, mode='lines', line=dict(color='rgba(0,128,0,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=2)
         fig.add_trace(go.Scatter(x=t_arr, y=a_arr, mode='lines', line=dict(color='rgba(255,165,0,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=3)
 
+        # [4번 트레이스] 운동하는 메인 빨간 공 (물체)
         fig.add_trace(go.Scatter(x=[x_arr[0]], y=[0], mode='markers', marker=dict(size=20, color='red'), showlegend=False), row=1, col=1)
         
+        # [5~7번 트레이스] 실시간으로 그려질 각 그래프의 실선들
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='lines', line=dict(color='orange', width=3.5), showlegend=False), row=2, col=3)
 
+        # [8~10번 트레이스] 그래프 선 끝에서 실시간으로 움직일 마커 점들
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='markers', marker=dict(color='blue', size=8), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=2, col=3)
@@ -86,18 +90,19 @@ if page == "위치/속도/가속도":
                 )
             )
 
+            # [💡 수정 완료] data 순서와 매핑할 글로벌 traces 번호 [4, 5, 6, 7, 8, 9, 10]를 정확히 일치시켰습니다.
             frames.append(go.Frame(
                 name=f'frame_{i}',
                 data=[
-                    go.Scatter(x=[x_arr[i]], y=[0]),           
-                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), 
-                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), 
-                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), 
-                    go.Scatter(x=[t_arr[i]], y=[x_arr[i]]),   
-                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),   
-                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])    
+                    go.Scatter(x=[x_arr[i]], y=[0]),           # 4번: 빨간 공 위치 이동 (늘어나지 않음)
+                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), # 5번: 위치 실선 드로우
+                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), # 6번: 속도 실선 드로우
+                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), # 7번: 가속도 실선 드로우
+                    go.Scatter(x=[t_arr[i]], y=[x_arr[i]]),   # 8번: 위치 마커 점
+                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),   # 9번: 속도 마커 점
+                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])    # 10번: 가속도 마커 점
                 ],
-                traces=[1, 2, 3, 4, 5, 6, 7], 
+                traces=[4, 5, 6, 7, 8, 9, 10], 
                 layout=go.Layout(annotations=frame_annotations)
             ))
         fig.frames = frames
@@ -344,11 +349,11 @@ elif page == "중력에 의한 운동":
         st.plotly_chart(fig_p, use_container_width=True, config={'displayModeBar': False})
 
     # ------------------------------------------
-    # Tab 3: 등속 원운동 (가속도 텍스트 동적 위치 전면 수정)
+    # Tab 3: 등속 원운동
     # ------------------------------------------
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
-        st.info("💡 **등속 원운동의 핵심**: 물체의 운동 방향(**속도 화살표**)과 힘의 방향(**가속도 화살표**)은 항상 **90°** 직각을 이룹니다. 가속도는 언제나 원의 중심을 향합니다.")
+        st.info("💡 **등속 원운동의 핵심**: 물체의 운동 방향(**속도 화살표**)과 힘의 방향(**가속도 화살표**)은 항상 **90°** 직각을 이룹니다. 가속도(구심력)는 언제나 원의 중심을 향합니다.")
         
         R_c = 10.0
         f_count_c = 120
@@ -366,7 +371,6 @@ elif page == "중력에 의한 운동":
         
         fig_c.add_trace(go.Scatter(x=[], y=[], mode='lines', line=dict(color='red', width=2), showlegend=False, hoverinfo='skip'))
         
-        # [💡 계산식 전면 교정] 글씨 좌표 연산 시 cx, cy 기준좌표를 다시 더하여 가속도 화살표와 한 축에 나란히 놓이게 처리함
         def get_circular_vector_data(cx, cy, theta):
             arrow_scale = 4.5
             
@@ -376,16 +380,12 @@ elif page == "중력에 의한 운동":
             ax_v = -arrow_scale * np.cos(theta)
             ay_v = -arrow_scale * np.sin(theta)
             
-            # 1. v(속도) 텍스트 좌표: 원 바깥쪽 (접선 방향 화살표 머리 바깥 부분)
             v_text_x = cx + vx * 1.15
             v_text_y = cy + vy * 1.15
             
-            # 2. [요청사항] a(가속도) 텍스트 좌표: 가속도 화살표와 같은 방향에 있도록 수정
-            # cx, cy(물체 위치)에서 원 중심(0,0) 방향으로 뻗은 가속도 벡터 연장선상(화살표 촉 뒤쪽)에 안착
             a_text_x = cx + ax_v * 1.35
             a_text_y = cy + ay_v * 1.35
             
-            # 3. 직각(90도) ㄱ자 기호 좌표 연산
             square_size = 1.0
             u_v_x, u_v_y = vx / arrow_scale, vy / arrow_scale 
             u_a_x, u_a_y = ax_v / arrow_scale, ay_v / arrow_scale 
@@ -420,7 +420,6 @@ elif page == "중력에 의한 운동":
                     dict(x=cx + vx, y=cy + vy, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="green"),
                     dict(x=cx + ax_v, y=cy + ay_v, ax=cx, ay=cy, xref="x", yref="y", axref="x", ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=3.5, arrowcolor="orange"),
                     dict(x=v_tx, y=v_ty, text="<b>v (속도)</b>", showarrow=False, font=dict(color="green", size=14)),
-                    # [💡 적용 완료] 원 중심 기준, 가속도 화살표와 완벽하게 같은 방향(Quadrant)선상에 텍스트 표기
                     dict(x=a_tx, y=a_ty, text="<b>a (가속도)</b>", showarrow=False, font=dict(color="orange", size=14))
                 ])
             ))
