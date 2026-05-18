@@ -14,7 +14,7 @@ st.sidebar.title("📚 학습 메뉴")
 page = st.sidebar.radio("원하는 페이지를 선택하세요:", ["위치/속도/가속도", "중력에 의한 운동"])
 
 # ==========================================
-# 1페이지: 위치/속도/가속도 (버그 완전 해결 완료)
+# 1페이지: 위치/속도/가속도
 # ==========================================
 if page == "위치/속도/가속도":
     st.title("📈 물체의 운동에 따른 시뮬레이션과 위치/속도/가속도 분석")
@@ -43,21 +43,17 @@ if page == "위치/속도/가속도":
             vertical_spacing=0.25
         )
 
-        # [0~3번 트레이스] 배경 가이드라인
         fig.add_trace(go.Scatter(x=[-50, 50], y=[0, 0], mode='lines', line=dict(color='gray', width=2), showlegend=False, hoverinfo='skip'), row=1, col=1)
         fig.add_trace(go.Scatter(x=t_arr, y=x_arr, mode='lines', line=dict(color='rgba(0,0,255,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=1)
         fig.add_trace(go.Scatter(x=t_arr, y=v_arr, mode='lines', line=dict(color='rgba(0,128,0,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=2)
         fig.add_trace(go.Scatter(x=t_arr, y=a_arr, mode='lines', line=dict(color='rgba(255,165,0,0.15)', dash='dash'), showlegend=False, hoverinfo='skip'), row=2, col=3)
 
-        # [4번 트레이스] 운동하는 메인 빨간 공 (물체)
         fig.add_trace(go.Scatter(x=[x_arr[0]], y=[0], mode='markers', marker=dict(size=20, color='red'), showlegend=False), row=1, col=1)
         
-        # [5~7번 트레이스] 실시간으로 그려질 각 그래프의 실선들
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='lines', line=dict(color='blue', width=3.5), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='lines', line=dict(color='green', width=3.5), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='lines', line=dict(color='orange', width=3.5), showlegend=False), row=2, col=3)
 
-        # [8~10번 트레이스] 그래프 선 끝에서 실시간으로 움직일 마커 점들
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[x_arr[0]], mode='markers', marker=dict(color='blue', size=8), showlegend=False), row=2, col=1)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[v_arr[0]], mode='markers', marker=dict(color='green', size=8), showlegend=False), row=2, col=2)
         fig.add_trace(go.Scatter(x=[t_arr[0]], y=[a_arr[0]], mode='markers', marker=dict(color='orange', size=8), showlegend=False), row=2, col=3)
@@ -90,17 +86,16 @@ if page == "위치/속도/가속도":
                 )
             )
 
-            # [💡 수정 완료] data 순서와 매핑할 글로벌 traces 번호 [4, 5, 6, 7, 8, 9, 10]를 정확히 일치시켰습니다.
             frames.append(go.Frame(
                 name=f'frame_{i}',
                 data=[
-                    go.Scatter(x=[x_arr[i]], y=[0]),           # 4번: 빨간 공 위치 이동 (늘어나지 않음)
-                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), # 5번: 위치 실선 드로우
-                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), # 6번: 속도 실선 드로우
-                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), # 7번: 가속도 실선 드로우
-                    go.Scatter(x=[t_arr[i]], y=[x_arr[i]]),   # 8번: 위치 마커 점
-                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),   # 9번: 속도 마커 점
-                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])    # 10번: 가속도 마커 점
+                    go.Scatter(x=[x_arr[i]], y=[0]),           
+                    go.Scatter(x=t_arr[:i+1], y=x_arr[:i+1]), 
+                    go.Scatter(x=t_arr[:i+1], y=v_arr[:i+1]), 
+                    go.Scatter(x=t_arr[:i+1], y=a_arr[:i+1]), 
+                    go.Scatter(x=[t_arr[i]], y=[x_arr[i]]),   
+                    go.Scatter(x=[t_arr[i]], y=[v_arr[i]]),   
+                    go.Scatter(x=[t_arr[i]], y=[a_arr[i]])    
                 ],
                 traces=[4, 5, 6, 7, 8, 9, 10], 
                 layout=go.Layout(annotations=frame_annotations)
@@ -162,23 +157,20 @@ if page == "위치/속도/가속도":
 # ==========================================
 elif page == "중력에 의한 운동":
     st.title("🌐 중력에 의한 운동 분석 시뮬레이션")
-    tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수평으로 던진 운동)", "등속 원운동"])
+    tabs = st.tabs(["자유낙하운동(등가속도직선운동)", "포물선운동(수水平으로 던진 운동)", "등속 원운동"])
     
     # ------------------------------------------
-    # Tab 1: 자유낙하운동
+    # Tab 1: 자유낙하운동 (지구 중력 가속도 선택 버튼 완전 삭제)
     # ------------------------------------------
     with tabs[0]:
         st.subheader("■ 자유낙하운동(등가속도직선운동)")
-        col_slider, col_btn = st.columns([3, 1])
-        with col_slider:
-            g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_v7")
-            st.session_state.g_val = g_input
-        with col_btn:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-            if st.button("🌍 지구 중력 가속도 선택 (9.8 m/s²)", use_container_width=True):
-                st.session_state.g_val = 9.8
-                st.rerun()
+        
+        st.markdown("### ⚙️ 가속도 설정")
+        # [💡 수정 완료] 가로 레이아웃 컬럼을 없애고 슬라이더가 온전히 단독으로 배치되도록 수정했습니다.
+        g_input = st.slider("중력 가속도 설정 (m/s²)", min_value=1.0, max_value=25.0, value=st.session_state.g_val, step=0.1, key="g_slider_v7")
+        st.session_state.g_val = g_input
 
+        # [💡 수정 완료] 지구 가속도 선택 버튼을 삭제하고 언제나 고정 상태 인포 박스 레이아웃 유지
         st.info(f"현재 가속도 설정값: {g_input} m/s²\n\n:red[지구 중력 가속도: 9.8 m/s²]")
         st.markdown("---")
 
@@ -353,7 +345,7 @@ elif page == "중력에 의한 운동":
     # ------------------------------------------
     with tabs[2]:
         st.subheader("■ 등속 원운동 시뮬레이션")
-        st.info("💡 **등속 원운동의 핵심**: 물체의 운동 방향(**속도 화살표**)과 힘의 방향(**가속도 화살표**)은 항상 **90°** 직각을 이룹니다. 가속도(구심력)는 언제나 원의 중심을 향합니다.")
+        st.info("💡 **등속 원운동의 핵심**: 물체의 운동 방향(**속도 화살표**)과 힘의 방향(**가속도 화살표**)은 항상 **90°** 직각을 이룹니다. 가속도는 언제나 원의 중심을 향합니다.")
         
         R_c = 10.0
         f_count_c = 120
